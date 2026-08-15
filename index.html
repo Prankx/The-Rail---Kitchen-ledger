@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+<title>The Rail — Kitchen Ledger</title>
+
+<!-- Add-to-home-screen behavior (iOS + Android) -->
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="The Rail" />
+<meta name="theme-color" content="#2b2620" />
+<link rel="apple-touch-icon" href="icons/icon-192.png" />
+<link rel="icon" href="icons/icon-192.png" />
+
+<link rel="manifest" href="manifest.json" />
+
+<link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --paper: #f6f1e7;
+    --ink: #2b2620;
+    --rust: #c65a2e;
+    --sage: #3f5b3a;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'JetBrains Mono', monospace;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .ticket { font-family: 'Special Elite', 'JetBrains Mono', monospace; }
+  header {
+    position: sticky; top: 0; z-index: 20;
+    background: var(--ink); color: var(--paper);
+    padding: max(20px, env(safe-area-inset-top)) 16px 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  }
+  .header-row { display: flex; align-items: center; justify-content: space-between; }
+  .eyebrow { font-size: 10px; letter-spacing: 0.3em; opacity: 0.6; }
+  h1 { font-size: 24px; margin: 2px 0 0; line-height: 1.1; }
+  .warn-banner {
+    margin-top: 12px; display: flex; align-items: center; gap: 8px;
+    background: var(--rust); color: var(--paper); border-radius: 6px;
+    padding: 8px 12px; font-size: 12px;
+  }
+  nav {
+    display: flex; border-bottom: 1px solid rgba(43,38,32,0.15);
+    background: var(--paper); position: sticky; top: 84px; z-index: 15;
+  }
+  nav button {
+    flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 12px 0; border: none; background: none; border-bottom: 2px solid transparent;
+    font-family: inherit; font-size: 14px; color: rgba(43,38,32,0.5); cursor: pointer;
+  }
+  nav button.active { border-color: var(--rust); color: var(--rust); }
+  main { padding: 16px; padding-bottom: 110px; max-width: 480px; margin: 0 auto; }
+  .row-between { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .section-title { font-size: 18px; }
+  .btn-add {
+    font-size: 12px; display: flex; align-items: center; gap: 4px;
+    background: var(--ink); color: var(--paper); border: none; border-radius: 6px;
+    padding: 7px 10px; cursor: pointer;
+  }
+  .card { background: white; border-radius: 10px; border: 1px solid rgba(43,38,32,0.1); box-shadow: 0 1px 2px rgba(0,0,0,0.03); margin-bottom: 12px; overflow: hidden; }
+  .card-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px 0; }
+  .card-title { font-size: 14px; }
+  .icon-btn { background: none; border: none; color: rgba(43,38,32,0.3); cursor: pointer; padding: 2px; }
+  .icon-btn:hover { color: var(--rust); }
+  .ledger-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; padding: 10px 14px 12px; text-align: center; font-size: 10px; }
+  .ledger-cell { display: flex; flex-direction: column; align-items: center; }
+  .ledger-cell .label { color: rgba(43,38,32,0.4); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+  .ledger-cell .value { font-family: 'Special Elite', monospace; font-size: 14px; margin-bottom: 4px; }
+  .ledger-cell .stepper { display: flex; gap: 4px; }
+  .stepper button { width: 20px; height: 20px; border-radius: 4px; border: none; background: rgba(43,38,32,0.08); display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 12px; line-height: 1; }
+  .end-cell { background: rgba(43,38,32,0.05); border-radius: 6px; padding: 6px 0; }
+  .end-cell .unit { color: rgba(43,38,32,0.3); font-size: 9px; }
+  .low-flag { background: rgba(198,90,46,0.1); color: var(--rust); font-size: 10px; padding: 6px 14px; display: flex; align-items: center; gap: 6px; }
+  .close-day-btn {
+    width: 100%; margin-top: 16px; padding: 13px; border: none; border-radius: 8px;
+    background: var(--ink); color: var(--paper); font-family: inherit; font-size: 14px;
+    display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer;
+  }
+  details { background: white; border: 1px solid rgba(43,38,32,0.1); border-radius: 8px; padding: 10px 14px; margin-bottom: 8px; }
+  summary { font-size: 12px; cursor: pointer; }
+  .hist-row { font-size: 10px; color: rgba(43,38,32,0.55); display: flex; justify-content: space-between; margin-top: 4px; }
+  .empty { text-align: center; padding: 40px 0; font-size: 12px; color: rgba(43,38,32,0.4); border: 1px dashed rgba(43,38,32,0.15); border-radius: 8px; }
+  .hint { font-size: 11px; color: rgba(43,38,32,0.45); margin-bottom: 12px; line-height: 1.5; }
+  .hint .rust { color: var(--rust); }
+  .recipe-list { font-size: 12px; color: rgba(43,38,32,0.6); margin: 8px 0 12px; padding-left: 0; list-style: none; }
+  .recipe-list li.short { color: var(--rust); }
+  .fire-btn { width: 100%; padding: 10px; border: none; border-radius: 6px; font-family: inherit; font-size: 14px; cursor: pointer; background: var(--sage); color: var(--paper); }
+  .fire-btn:disabled { background: rgba(43,38,32,0.1); color: rgba(43,38,32,0.35); cursor: not-allowed; }
+  .toast {
+    position: fixed; bottom: max(24px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%);
+    z-index: 40; font-size: 13px; padding: 10px 16px; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    color: var(--paper); opacity: 0; pointer-events: none; transition: opacity 0.2s;
+  }
+  .toast.show { opacity: 1; }
+  .toast.ok { background: var(--sage); }
+  .toast.warn { background: var(--rust); }
+  .modal-backdrop {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 50;
+    display: flex; align-items: flex-end; justify-content: center;
+  }
+  .modal { background: var(--paper); width: 100%; max-width: 420px; border-radius: 16px 16px 0 0; padding: 20px; max-height: 85vh; overflow-y: auto; padding-bottom: max(20px, env(safe-area-inset-bottom)); }
+  .modal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .modal-head h3 { font-size: 18px; margin: 0; }
+  .field { margin-bottom: 12px; }
+  .field label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: rgba(43,38,32,0.45); display: block; margin-bottom: 4px; }
+  .field input, .field select, .modal-input {
+    width: 100%; font-family: inherit; font-size: 13px; background: white;
+    border: 1px solid rgba(43,38,32,0.15); border-radius: 6px; padding: 9px 10px; outline: none;
+  }
+  .field input:focus, .field select:focus { border-color: var(--rust); }
+  .flex-row { display: flex; gap: 8px; }
+  .flex-1 { flex: 1; }
+  .w-90 { width: 90px; }
+  .ingredient-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .add-row-btn { background: none; border: none; color: rgba(43,38,32,0.6); font-family: inherit; font-size: 12px; display: flex; align-items: center; gap: 4px; cursor: pointer; margin-bottom: 12px; padding: 0; }
+  .save-btn { width: 100%; padding: 12px; border: none; border-radius: 6px; background: var(--ink); color: var(--paper); font-family: inherit; font-size: 14px; cursor: pointer; margin-top: 8px; }
+  .cancel-row { display: flex; gap: 8px; }
+  .cancel-btn { flex: 1; padding: 12px; border: none; border-radius: 6px; background: rgba(43,38,32,0.08); color: var(--ink); font-family: inherit; font-size: 14px; cursor: pointer; }
+  .confirm-btn { flex: 1; padding: 12px; border: none; border-radius: 6px; background: var(--ink); color: var(--paper); font-family: inherit; font-size: 14px; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-row">
+    <div>
+      <div class="eyebrow">DAILY LEDGER</div>
+      <h1 id="today-label"></h1>
+    </div>
+    <span style="font-size:26px;">🔪</span>
+  </div>
+  <div id="warn-banner"></div>
+</header>
+
+<nav>
+  <button id="tab-ledger" class="active">📋 Ledger</button>
+  <button id="tab-orders">🍳 Log Sales</button>
+</nav>
+
+<main id="main"></main>
+
+<div id="toast" class="toast"></div>
+<div id="modal-root"></div>
+
+<script>
+/* ---------- State ---------- */
+const UNITS = ["pcs","g","kg","ml","l","tbsp","tsp"];
+const STORE_KEY = "kitchen_ledger_v1";
+
+const DEFAULT_STATE = {
+  ingredients: [
+    { id:"i1", name:"Eggs", unit:"pcs", start:20, production:4, sold:6, low:6 },
+    { id:"i2", name:"Butter", unit:"g", start:400, production:100, sold:40, low:100 },
+    { id:"i3", name:"Milk", unit:"ml", start:800, production:200, sold:200, low:200 },
+    { id:"i4", name:"Cheddar", unit:"g", start:250, production:50, sold:60, low:50 },
+    { id:"i5", name:"Flour", unit:"g", start:1800, production:0, sold:150, low:300 },
+    { id:"i6", name:"Steak", unit:"g", start:3000, production:0, sold:800, low:500 }
+  ],
+  recipes: [
+    { id:"r1", name:"Omelet", items:[{ing:"i1",amt:3},{ing:"i2",amt:10}] },
+    { id:"r2", name:"Grilled Cheese", items:[{ing:"i4",amt:60},{ing:"i2",amt:15}] },
+    { id:"r3", name:"Pancakes (stack)", items:[{ing:"i5",amt:150},{ing:"i1",amt:2},{ing:"i3",amt:200}] },
+    { id:"r4", name:"Breakfast Steak", items:[{ing:"i1",amt:1},{ing:"i6",amt:100}] }
+  ],
+  history: []
+};
+
+let state = load();
+let tab = "ledger";
+
+function load() {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch(e) {}
+  return JSON.parse(JSON.stringify(DEFAULT_STATE));
+}
+function save() {
+  localStorage.setItem(STORE_KEY, JSON.stringify(state));
+}
+function uid(p){ return p + Math.random().toString(36).slice(2,9); }
+function round2(n){ return Math.round(n*100)/100; }
+function endOf(ing){ return round2(ing.start + ing.production - ing.sold); }
+function ingredientById(id){ return state.ingredients.find(i=>i.id===id); }
+function availableOf(id){ const ing = ingredientById(id); return ing ? endOf(ing) : 0; }
+function canFire(recipe){ return recipe.items.every(it => availableOf(it.ing) >= it.amt); }
+function todayLabel(){
+  return new Date().toLocaleDateString(undefined,{weekday:"long", month:"short", day:"numeric"});
+}
+
+/* ---------- Toast ---------- */
+let toastTimer;
+function showToast(msg, kind="ok"){
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.className = "toast show " + kind;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=> el.classList.remove("show"), 2400);
+}
+
+/* ---------- Actions ---------- */
+function adjustField(id, field, delta){
+  const ing = ingredientById(id);
+  ing[field] = Math.max(0, round2(ing[field] + delta));
+  save(); render();
+}
+function deleteIngredient(id){
+  state.ingredients = state.ingredients.filter(i=>i.id!==id);
+  state.recipes = state.recipes.map(r=>({...r, items:r.items.filter(it=>it.ing!==id)}));
+  save(); render();
+}
+function deleteRecipe(id){
+  state.recipes = state.recipes.filter(r=>r.id!==id);
+  save(); render();
+}
+function fireOrder(recipeId){
+  const recipe = state.recipes.find(r=>r.id===recipeId);
+  if (!canFire(recipe)){ showToast("Not enough left for " + recipe.name, "warn"); return; }
+  recipe.items.forEach(it=>{
+    const ing = ingredientById(it.ing);
+    ing.sold = round2(ing.sold + it.amt);
+  });
+  save(); render();
+  showToast("Sold: " + recipe.name, "ok");
+}
+function closeDay(){
+  const snapshot = {
+    id: uid("d"),
+    label: todayLabel(),
+    rows: state.ingredients.map(i=>({name:i.name, unit:i.unit, start:i.start, production:i.production, sold:i.sold, end:endOf(i)}))
+  };
+  state.history = [snapshot, ...state.history].slice(0,30);
+  state.ingredients = state.ingredients.map(i=>({...i, start: endOf(i), production:0, sold:0}));
+  save(); render();
+  closeModal();
+  showToast("Day closed. Tomorrow's start is set.", "ok");
+}
+function addIngredient(name, unit, start, low){
+  state.ingredients.push({ id:uid("i"), name, unit, start, production:0, sold:0, low });
+  save(); render();
+}
+function addRecipe(name, items){
+  state.recipes.push({ id:uid("r"), name, items });
+  save(); render();
+}
+
+/* ---------- Rendering ---------- */
+function esc(s){ const d=document.createElement("div"); d.textContent=s; return d.innerHTML; }
+
+function render(){
+  document.getElementById("today-label").textContent = todayLabel();
+  const lowStock = state.ingredients.filter(i => endOf(i) <= i.low);
+  const banner = document.getElementById("warn-banner");
+  banner.innerHTML = lowStock.length ? `<div class="warn-banner">⚠️ Projected low at EOD: ${esc(lowStock.map(i=>i.name).join(", "))}</div>` : "";
+
+  document.getElementById("tab-ledger").className = tab==="ledger" ? "active" : "";
+  document.getElementById("tab-orders").className = tab==="orders" ? "active" : "";
+
+  const main = document.getElementById("main");
+  main.innerHTML = tab === "ledger" ? renderLedger() : renderOrders();
+  attachHandlers();
+}
+
+function renderLedger(){
+  let html = `<div class="row-between"><div class="ticket section-title">Today's sheet</div>
+    <button class="btn-add" data-action="open-add-ing">＋ New item</button></div>`;
+
+  if (state.ingredients.length === 0){
+    html += `<div class="empty">No items yet. Add your first ingredient.</div>`;
+  } else {
+    html += state.ingredients.map(ing=>{
+      const end = endOf(ing);
+      const low = end <= ing.low;
+      return `
+      <div class="card">
+        <div class="card-head">
+          <div class="ticket card-title">${esc(ing.name)}</div>
+          <button class="icon-btn" data-action="delete-ing" data-id="${ing.id}">✕</button>
+        </div>
+        <div class="ledger-grid">
+          ${ledgerCell(ing.id, "start", "Start", ing.start, ing.unit)}
+          ${ledgerCell(ing.id, "production", "Prod.", ing.production, ing.unit, "#3f5b3a")}
+          ${ledgerCell(ing.id, "sold", "Sold", ing.sold, ing.unit, "#c65a2e")}
+          <div class="ledger-cell end-cell">
+            <span class="label">End</span>
+            <span class="value" style="color:${low?'#c65a2e':'#2b2620'}">${end}</span>
+            <span class="unit">${esc(ing.unit)}</span>
+          </div>
+        </div>
+        ${low ? `<div class="low-flag">⚠️ projected below reorder line (${ing.low}${esc(ing.unit)})</div>` : ""}
+      </div>`;
+    }).join("");
+
+    html += `<button class="close-day-btn" data-action="confirm-close">🌙 Close day &amp; roll over</button>`;
+  }
+
+  if (state.history.length){
+    html += `<div style="margin-top:24px;">
+      <div class="ticket" style="font-size:14px;color:rgba(43,38,32,0.5);margin-bottom:8px;">🌅 Past days</div>
+      ${state.history.slice(0,5).map(h=>`
+        <details>
+          <summary>${esc(h.label)}</summary>
+          ${h.rows.map(r=>`<div class="hist-row"><span>${esc(r.name)}</span><span>${r.start} + ${r.production} − ${r.sold} = ${r.end}${esc(r.unit)}</span></div>`).join("")}
+        </details>
+      `).join("")}
+    </div>`;
+  }
+  return html;
+}
+
+function ledgerCell(id, field, label, value, unit, color){
+  return `<div class="ledger-cell">
+    <span class="label">${label}</span>
+    <span class="value"${color?` style="color:${color}"`:""}>${value}</span>
+    <div class="stepper">
+      <button data-action="adjust" data-id="${id}" data-field="${field}" data-delta="-1">−</button>
+      <button data-action="adjust" data-id="${id}" data-field="${field}" data-delta="1">＋</button>
+    </div>
+  </div>`;
+}
+
+function renderOrders(){
+  let html = `<div class="row-between"><div class="ticket section-title">Log a sale</div>
+    <button class="btn-add" data-action="open-add-recipe">＋ New product</button></div>
+    <div class="hint">Tapping a product adds its ingredients straight to today's <span class="rust">Sold</span> column.</div>`;
+
+  if (state.recipes.length === 0){
+    html += `<div class="empty">No products yet. Add one to start logging sales.</div>`;
+  } else {
+    html += state.recipes.map(r=>{
+      const ok = canFire(r);
+      const items = r.items.map(it=>{
+        const ing = ingredientById(it.ing);
+        const short = ing && availableOf(it.ing) < it.amt;
+        return `<li class="${short?'short':''}">${it.amt}${ing?esc(ing.unit):''} ${ing?esc(ing.name):'(deleted item)'} ${short&&ing?`— only ${availableOf(it.ing)}${esc(ing.unit)} left`:''}</li>`;
+      }).join("");
+      return `
+      <div class="card" style="position:relative;">
+        <div class="card-head" style="padding-top:14px;">
+          <div class="ticket" style="font-size:16px;">${esc(r.name)}</div>
+          <button class="icon-btn" data-action="delete-recipe" data-id="${r.id}">🗑</button>
+        </div>
+        <div style="padding:0 14px;">
+          <ul class="recipe-list">${items}</ul>
+          <div style="padding-bottom:14px;">
+            <button class="fire-btn" data-action="fire" data-id="${r.id}" ${ok?"":"disabled"}>${ok?"+1 sold →":"Not enough left"}</button>
+          </div>
+        </div>
+      </div>`;
+    }).join("");
+  }
+  return html;
+}
+
+/* ---------- Event wiring ---------- */
+function attachHandlers(){
+  document.querySelectorAll('[data-action="adjust"]').forEach(btn=>{
+    btn.onclick = () => adjustField(btn.dataset.id, btn.dataset.field, parseFloat(btn.dataset.delta));
+  });
+  document.querySelectorAll('[data-action="delete-ing"]').forEach(btn=>{
+    btn.onclick = () => deleteIngredient(btn.dataset.id);
+  });
+  document.querySelectorAll('[data-action="delete-recipe"]').forEach(btn=>{
+    btn.onclick = () => deleteRecipe(btn.dataset.id);
+  });
+  document.querySelectorAll('[data-action="fire"]').forEach(btn=>{
+    btn.onclick = () => fireOrder(btn.dataset.id);
+  });
+  const addIngBtn = document.querySelector('[data-action="open-add-ing"]');
+  if (addIngBtn) addIngBtn.onclick = openAddIngredientModal;
+  const addRecBtn = document.querySelector('[data-action="open-add-recipe"]');
+  if (addRecBtn) addRecBtn.onclick = openAddRecipeModal;
+  const closeBtn = document.querySelector('[data-action="confirm-close"]');
+  if (closeBtn) closeBtn.onclick = openCloseDayModal;
+}
+
+document.getElementById("tab-ledger").onclick = () => { tab="ledger"; render(); };
+document.getElementById("tab-orders").onclick = () => { tab="orders"; render(); };
+
+/* ---------- Modals ---------- */
+function closeModal(){ document.getElementById("modal-root").innerHTML = ""; }
+
+function openCloseDayModal(){
+  document.getElementById("modal-root").innerHTML = `
+    <div class="modal-backdrop" id="backdrop">
+      <div class="modal">
+        <div class="modal-head"><h3 class="ticket">Close the day?</h3><button class="icon-btn" id="close-x">✕</button></div>
+        <p style="font-size:12px;color:rgba(43,38,32,0.6);line-height:1.5;margin-bottom:16px;">
+          This locks in today's End of Day totals as tomorrow's Start of Day, then resets Production and Sold to zero for every item. Today's sheet is saved to history.
+        </p>
+        <div class="cancel-row">
+          <button class="cancel-btn" id="cancel-close">Cancel</button>
+          <button class="confirm-btn" id="confirm-close-btn">Close day</button>
+        </div>
+      </div>
+    </div>`;
+  document.getElementById("close-x").onclick = closeModal;
+  document.getElementById("cancel-close").onclick = closeModal;
+  document.getElementById("confirm-close-btn").onclick = closeDay;
+  document.getElementById("backdrop").onclick = (e)=>{ if(e.target.id==="backdrop") closeModal(); };
+}
+
+function openAddIngredientModal(){
+  document.getElementById("modal-root").innerHTML = `
+    <div class="modal-backdrop" id="backdrop">
+      <div class="modal">
+        <div class="modal-head"><h3 class="ticket">New ingredient</h3><button class="icon-btn" id="close-x">✕</button></div>
+        <div class="field"><label>Name</label><input id="f-name" placeholder="e.g. Eggs" /></div>
+        <div class="flex-row">
+          <div class="field flex-1"><label>Start of day qty</label><input id="f-start" type="number" placeholder="0" /></div>
+          <div class="field w-90"><label>Unit</label>
+            <select id="f-unit">${UNITS.map(u=>`<option value="${u}">${u}</option>`).join("")}</select>
+          </div>
+        </div>
+        <div class="field"><label>Reorder line (flag when end of day drops to this)</label><input id="f-low" type="number" placeholder="0" /></div>
+        <button class="save-btn" id="save-ing">Add ingredient</button>
+      </div>
+    </div>`;
+  document.getElementById("close-x").onclick = closeModal;
+  document.getElementById("backdrop").onclick = (e)=>{ if(e.target.id==="backdrop") closeModal(); };
+  document.getElementById("f-name").focus();
+  document.getElementById("save-ing").onclick = () => {
+    const name = document.getElementById("f-name").value.trim();
+    const unit = document.getElementById("f-unit").value;
+    const start = document.getElementById("f-start").value;
+    const low = document.getElementById("f-low").value;
+    if (!name || start === "") return;
+    addIngredient(name, unit, +start, low===""?0:+low);
+    closeModal();
+  };
+}
+
+function openAddRecipeModal(){
+  let rows = [{ing: state.ingredients[0]?.id || "", amt:""}];
+  function rowsHtml(){
+    return rows.map((row, idx)=>`
+      <div class="ingredient-row">
+        <select class="modal-input flex-1" data-row="${idx}" data-role="ing">
+          ${state.ingredients.map(ing=>`<option value="${ing.id}" ${ing.id===row.ing?"selected":""}>${esc(ing.name)}</option>`).join("")}
+        </select>
+        <input class="modal-input w-90" type="number" placeholder="amt" data-row="${idx}" data-role="amt" value="${row.amt}" />
+        <button class="icon-btn" data-row="${idx}" data-role="remove">✕</button>
+      </div>`).join("");
+  }
+  function renderModal(){
+    document.getElementById("modal-root").innerHTML = `
+      <div class="modal-backdrop" id="backdrop">
+        <div class="modal">
+          <div class="modal-head"><h3 class="ticket">New product</h3><button class="icon-btn" id="close-x">✕</button></div>
+          <div class="field"><label>Product name</label><input id="f-name" placeholder="e.g. Breakfast Steak" /></div>
+          <div style="font-size:12px;color:rgba(43,38,32,0.5);margin:4px 0 8px;">Consumes per order</div>
+          <div id="rows-wrap">${rowsHtml()}</div>
+          <button class="add-row-btn" id="add-row">＋ Add ingredient</button>
+          <button class="save-btn" id="save-recipe">Save product</button>
+        </div>
+      </div>`;
+    document.getElementById("close-x").onclick = closeModal;
+    document.getElementById("backdrop").onclick = (e)=>{ if(e.target.id==="backdrop") closeModal(); };
+    document.querySelectorAll('[data-role="ing"]').forEach(el=>{
+      el.onchange = () => { rows[el.dataset.row].ing = el.value; };
+    });
+    document.querySelectorAll('[data-role="amt"]').forEach(el=>{
+      el.oninput = () => { rows[el.dataset.row].amt = el.value; };
+    });
+    document.querySelectorAll('[data-role="remove"]').forEach(el=>{
+      el.onclick = () => { rows.splice(+el.dataset.row,1); renderModal(); };
+    });
+    document.getElementById("add-row").onclick = () => { rows.push({ing: state.ingredients[0]?.id||"", amt:""}); renderModal(); };
+    document.getElementById("save-recipe").onclick = () => {
+      const name = document.getElementById("f-name").value.trim();
+      const clean = rows.filter(r=>r.ing && r.amt !== "" && +r.amt > 0).map(r=>({ing:r.ing, amt:+r.amt}));
+      if (!name || clean.length === 0) return;
+      addRecipe(name, clean);
+      closeModal();
+    };
+    document.getElementById("f-name").focus();
+  }
+  renderModal();
+}
+
+/* ---------- Boot ---------- */
+render();
+</script>
+</body>
+</html>
